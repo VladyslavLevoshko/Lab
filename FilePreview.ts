@@ -1,37 +1,58 @@
-function getHTMLElements(){
-    const input = document.querySelector<HTMLInputElement>('#input');
-    const preview = document.querySelector<HTMLDivElement>('#preview');
-    return {input, preview}
+function getHTMLElements() {
+    return {
+        input: document.querySelector<HTMLInputElement>('#input'),
+        preview: document.querySelector<HTMLDivElement>('#preview'),
+        dropZone: document.querySelector<HTMLDivElement>('#dropZone')
+    };
 }
 
 function assertExists<T>(element:T | null | undefined, message:string):asserts element is T{
-    if(!element) throw new Error(message);
+    if(element == null || element == undefined) throw new Error(message);
 }
 
 function getHTMLInputFile(input:HTMLInputElement):File{
-    if(!input.files || input.files.length === 0) throw new Error('No file in input');
-    return input.files[0]
+    const file = input.files?.[0];
+    if(!file){
+        throw new Error('No file in input')
+    }
+    return file
 }
 
-function addImageOnPage(image:HTMLImageElement, place:HTMLDivElement){
+function renderImage(image:HTMLImageElement, place:HTMLDivElement){
     place.replaceChildren(image)
 }
 
 function createImage(file:File) : HTMLImageElement {
     const image = document.createElement('img');
     const imageURL = URL.createObjectURL(file);
+    image.onload = () => URL.revokeObjectURL(imageURL);
     image.src = imageURL;
-    image.onload = () => URL.revokeObjectURL(imageURL)
     return image
 }
 
-const {input, preview} = getHTMLElements();
+function showPreview(file:File, place:HTMLDivElement){
+    const image = createImage(file);
+    renderImage(image, place)
+}
+
+const {input, preview, dropZone} = getHTMLElements();
 
 assertExists(input, 'Can not find input element on HTML page');
 assertExists(preview, 'Can not find preview element on HTML page');
+assertExists(dropZone, 'Can not find drop zone on HTML page')
 
 input.addEventListener('change', () => {
     const file = getHTMLInputFile(input);
-    const image = createImage(file);
-    addImageOnPage(image, preview);
+    showPreview(file, preview)
+});
+
+dropZone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+});
+
+dropZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    const file = event.dataTransfer?.files[0];
+    assertExists(file, 'file not found')
+    showPreview(file, preview)
 });

@@ -2,7 +2,6 @@ function getHTMLElements() {
     return {
         input: document.querySelector<HTMLInputElement>('#input'),
         preview: document.querySelector<HTMLDivElement>('#preview'),
-        dropZone: document.querySelector<HTMLDivElement>('#dropZone')
     };
 }
 
@@ -10,11 +9,9 @@ function assertExists<T>(element:T | null | undefined, message:string):asserts e
     if(element == null || element == undefined) throw new Error(message);
 }
 
-function getHTMLInputFile(input:HTMLInputElement):File{
-    const file = input.files?.[0];
-    if(!file){
-        throw new Error('No file in input')
-    }
+function getInputFile(fileSource:HTMLInputElement | DataTransfer):File{
+    const file = fileSource.files?.[0];
+    assertExists(file,'No file in input');
     return file
 }
 
@@ -35,24 +32,37 @@ function showPreview(file:File, place:HTMLDivElement){
     renderImage(image, place)
 }
 
-const {input, preview, dropZone} = getHTMLElements();
+function handleFile(file:File, preview:HTMLDivElement){
+    showPreview(file, preview);
+}
+
+const {input, preview} = getHTMLElements();
 
 assertExists(input, 'Can not find input element on HTML page');
 assertExists(preview, 'Can not find preview element on HTML page');
-assertExists(dropZone, 'Can not find drop zone on HTML page')
 
 input.addEventListener('change', () => {
-    const file = getHTMLInputFile(input);
-    showPreview(file, preview)
+    const file = getInputFile(input);
+    handleFile(file, preview);
 });
 
-dropZone.addEventListener('dragover', (event) => {
+preview.addEventListener('dragover', (event) => {
     event.preventDefault();
 });
 
-dropZone.addEventListener('drop', (event) => {
+preview.addEventListener('dragenter', () => {
+    preview.classList.add('dragging');
+});
+
+
+preview.addEventListener('dragleave', () => {
+    preview.classList.remove('dragging');
+});
+
+preview.addEventListener('drop', (event) => {
     event.preventDefault();
-    const file = event.dataTransfer?.files[0];
-    assertExists(file, 'file not found')
-    showPreview(file, preview)
+    preview.classList.remove('dragging')
+    assertExists(event.dataTransfer, 'Nothing had dropped')
+    const file = getInputFile(event.dataTransfer)
+    handleFile(file, preview);
 });
